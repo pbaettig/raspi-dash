@@ -1,0 +1,27 @@
+vcgencmd get_throttled
+throttled=0x0
+111100000000000001010
+||||             ||||_ under-voltage
+||||             |||_ currently throttled
+||||             ||_ arm frequency capped
+||||             |_ soft temperature reached
+||||_ under-voltage has occurred since last reboot
+|||_ throttling has occurred since last reboot
+||_ arm frequency capped has occurred since last reboot
+|_ soft temperature reached since last reboot
+
+0x20000 == throttling has occurred since last reboot
+0x2 == currently throttled
+
+vcgencmd measure_temp
+temp=46.2'C
+
+
+vcgencmd measure_clock arm
+frequency(48)=600062000 # Hz
+
+# https://man7.org/linux/man-pages/man5/proc.5.html
+$ cat /proc/loadavg
+0.10 0.04 0.01 2/284 31305
+
+$ cat /proc/meminfo

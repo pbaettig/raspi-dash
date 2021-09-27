@@ -1,0 +1,5 @@
+<html>
+    <p><b>Load Avg:</b> {{ .LoadAvg1 }} / {{ .LoadAvg5 }} / {{ .LoadAvg15 }}</p>
+    <p><b>CPU Temp:</b> {{ .CPUTemp }} °C</p>
+    <img alt="plot" src="data:image/png;base64,{{ .PlotB64 }}" />
+</html>
