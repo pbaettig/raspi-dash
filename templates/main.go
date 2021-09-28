@@ -3,6 +3,8 @@ package templates
 import (
 	"embed"
 	"html/template"
+
+	"github.com/prometheus/procfs"
 )
 
 type IndexPageData struct {
@@ -11,6 +13,7 @@ type IndexPageData struct {
 	LoadAvg15 string
 	CPUTemp   string
 	Plots     map[string]string
+	RaidStats []procfs.MDStat
 }
 
 //go:embed *.tmpl

@@ -41,6 +41,12 @@ func (d *Datapoints) All() plotter.XYs {
 }
 
 func (d *Datapoints) Last(n int) plotter.XYs {
+	if n < 0 {
+		return d.values
+	}
+	if n == 0 {
+		return plotter.XYs{}
+	}
 
 	if len(d.values) <= n {
 		return d.values

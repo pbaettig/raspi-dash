@@ -1,7 +1,16 @@
 <html>
     <p><b>Load Avg:</b> {{ .LoadAvg1 }} / {{ .LoadAvg5 }} / {{ .LoadAvg15 }}</p>
     <p><b>CPU Temp:</b> {{ .CPUTemp }} °C</p>
-    {{ range $name, $b64 := .Plots }}
-        <img alt="{{ $name }}" src="data:image/png;base64,{{ $b64 }}" />
+    <br>
+    {{ range .RaidStats }}
+    <p><b>RAID Stats for {{ .Name }}</b></p>
+    <p><b>Array State:</b> {{ .ActivityState }}</p>
+    <p><b>Disks:</b> {{ .DisksTotal }} total ({{ .DisksActive }} active / {{ .DisksSpare }} spare / {{ .DisksDown }} down / {{ .DisksFailed }} failed)</p>
+    <br>
+    <hr>
+    <br>
+    {{ end }}
+    {{ range $name, $src := .Plots }}
+        <center><img alt="{{ $name }}" src="{{ $src }}" /></center>
     {{ end }}
 </html>

@@ -3,6 +3,7 @@ package stats
 import (
 	"bytes"
 	"image/color"
+	"time"
 
 	"github.com/pbaettig/raspi-dash/series"
 	"gonum.org/v1/plot"
@@ -11,64 +12,69 @@ import (
 )
 
 var (
-	TemperaturePlot CPUTemperaturePlot = CPUTemperaturePlot{series.NewSeries("CPU Temperature", 3600)}
-	NetworkRxTxPlot NetworkPlot        = NetworkPlot{series.NewSeries("eth0 Rx", 3600), series.NewSeries("eth0 Tx", 3600)}
-	LoadAvgPlot     LoadPlot           = LoadPlot{
+	TemperaturePlot SingleValuePlot = SingleValuePlot{
+		Value: series.NewSeries("cpuTemp", 3600),
+		Name:  "CPUTemperature",
+		YMin:  0,
+		YMax:  100,
+		LineStyle: &draw.LineStyle{
+			Color: color.RGBA{216, 87, 42, 255},
+			Width: 1.5,
+		},
+	}
+	NetworkRxTxPlot NetworkPlot = NetworkPlot{
+		Rx: series.NewSeries("eth0 Rx", 3600),
+		Tx: series.NewSeries("eth0 Tx", 3600),
+	}
+	LoadAvgPlot LoadPlot = LoadPlot{
 		Avg1:  series.NewSeries("avg1", 3600),
 		Avg5:  series.NewSeries("avg5", 3600),
 		Avg15: series.NewSeries("avg15", 3600),
 	}
+	MemoryUsedPlot SingleValuePlot = SingleValuePlot{
+		Value: series.NewSeries("used", 3600),
+		Name:  "MemoryUsed",
+		YMin:  0,
+		YMax:  100,
+		LineStyle: &draw.LineStyle{
+			Color: color.RGBA{37, 137, 189, 255},
+			Width: 1.2,
+		},
+	}
+	AllPlots map[string]StatPlotter = map[string]StatPlotter{
+		"cpuTemp":    &TemperaturePlot,
+		"network":    &NetworkRxTxPlot,
+		"loadAvg":    &LoadAvgPlot,
+		"memoryUsed": &MemoryUsedPlot,
+	}
 )
 
 type StatPlotter interface {
-	Plot(n int) ([]byte, error)
+	PNG(n int) ([]byte, error)
+	AddPoint(t time.Time, v ...float64)
 }
 
-type CPUTemperaturePlot struct {
-	*series.Series
-}
+// type CPUTemperaturePlot struct {
+// 	*series.Series
+// }
 
-func (ctp CPUTemperaturePlot) PNG(n int) ([]byte, error) {
-	p := setupPlot("CPU Temperature")
+// func (ctp CPUTemperaturePlot) PNG(n int) ([]byte, error) {
+// 	line, err := plotter.NewLine(ctp.Series.Datapoints.Last(n))
+// 	if err != nil {
+// 		return []byte{}, err
+// 	}
+// 	line.LineStyle = draw.LineStyle{
+// 		Color: color.RGBA{202, 46, 85, 255},
+// 		Width: 1.0,
+// 	}
+// 	p := setupPlot("CPU Temperature")
+// 	p.Y.Min = 0
+// 	p.Y.Max = 120
+// 	p.X.Tick.Marker = plot.TimeTicks{}
+// 	p.Add(line)
 
-	p.Y.Min = 0
-	p.Y.Max = 120
-
-	// linePoints := make(plotter.XYs, 0)
-	// var datapoints []series.Datapoint
-	// if n == -1 {
-	// 	datapoints = ctp.Datapoints.All()
-	// } else {
-	// 	datapoints = ctp.Datapoints.Last(n)
-	// }
-
-	// for _, dp := range datapoints {
-	// 	linePoints = append(linePoints, plotter.XY{float64(dp.Timestamp.Unix()), dp.Value})
-	// }
-
-	line, err := plotter.NewLine(ctp.Series.Datapoints.Last(n))
-	if err != nil {
-		return []byte{}, err
-	}
-	line.LineStyle = draw.LineStyle{
-		Color: color.RGBA{255, 128, 0, 255},
-		Width: 1.0,
-	}
-
-	p.X.Tick.Marker = plot.TimeTicks{}
-
-	p.Add(line)
-
-	// Save the plot to a PNG file.
-	wt, err := p.WriterTo(640, 200, "png")
-	if err != nil {
-		panic(err)
-	}
-	buf := new(bytes.Buffer)
-	wt.WriteTo(buf)
-
-	return buf.Bytes(), nil
-}
+// 	return plotToPng(p)
+// }
 
 type NetworkPlot struct {
 	Rx *series.Series
@@ -81,8 +87,8 @@ func (np NetworkPlot) PNG(n int) ([]byte, error) {
 		return []byte{}, err
 	}
 	rxLine.LineStyle = draw.LineStyle{
-		Color: color.RGBA{52, 92, 89, 255},
-		Width: 1.0,
+		Color: color.RGBA{232, 141, 103, 255},
+		Width: 1.2,
 	}
 
 	txLine, err := plotter.NewLine(np.Tx.Datapoints.Last(n))
@@ -90,8 +96,8 @@ func (np NetworkPlot) PNG(n int) ([]byte, error) {
 		return []byte{}, err
 	}
 	txLine.LineStyle = draw.LineStyle{
-		Color: color.RGBA{197, 72, 199, 255},
-		Width: 1.0,
+		Color: color.RGBA{153, 153, 195, 255},
+		Width: 1.2,
 	}
 
 	p := setupPlot("Network")
@@ -99,6 +105,15 @@ func (np NetworkPlot) PNG(n int) ([]byte, error) {
 	p.Legend.Add("Rx", rxLine)
 	p.Legend.Add("Tx", txLine)
 	return plotToPng(p)
+}
+
+// AddPoint Rx, TX
+func (np NetworkPlot) AddPoint(t time.Time, v ...float64) {
+	if len(v) != 2 {
+		panic("not enough values to add point for NetworkPlot")
+	}
+	np.Rx.Datapoints.Push(t, v[0])
+	np.Tx.Datapoints.Push(t, v[1])
 }
 
 type LoadPlot struct {
@@ -112,7 +127,7 @@ func (lp LoadPlot) PNG(n int) ([]byte, error) {
 	}
 	avg1Line.LineStyle = draw.LineStyle{
 		Color: color.RGBA{113, 124, 137, 255},
-		Width: 1.0,
+		Width: 1.2,
 	}
 
 	avg5Line, err := plotter.NewLine(lp.Avg5.Datapoints.Last(n))
@@ -121,7 +136,7 @@ func (lp LoadPlot) PNG(n int) ([]byte, error) {
 	}
 	avg5Line.LineStyle = draw.LineStyle{
 		Color: color.RGBA{144, 186, 173, 255},
-		Width: 1.0,
+		Width: 1.2,
 	}
 
 	avg15Line, err := plotter.NewLine(lp.Avg15.Datapoints.Last(n))
@@ -130,7 +145,7 @@ func (lp LoadPlot) PNG(n int) ([]byte, error) {
 	}
 	avg15Line.LineStyle = draw.LineStyle{
 		Color: color.RGBA{173, 246, 177, 255},
-		Width: 1.0,
+		Width: 1.2,
 	}
 
 	p := setupPlot("LoadAvg")
@@ -140,6 +155,84 @@ func (lp LoadPlot) PNG(n int) ([]byte, error) {
 	p.Legend.Add("Avg15", avg15Line)
 
 	return plotToPng(p)
+}
+
+// AddPoint avg1, avg5, avg15
+func (lp LoadPlot) AddPoint(t time.Time, v ...float64) {
+	if len(v) != 3 {
+		panic("not enough values to add point for LoadPlot")
+	}
+	lp.Avg1.Datapoints.Push(t, v[0])
+	lp.Avg5.Datapoints.Push(t, v[1])
+	lp.Avg15.Datapoints.Push(t, v[2])
+}
+
+// type MemPlot struct {
+// 	Used, Available *series.Series
+// }
+
+// func (mp MemPlot) PNG(n int) ([]byte, error) {
+// 	usedLine, err := plotter.NewLine(mp.Used.Datapoints.Last(n))
+// 	if err != nil {
+// 		return []byte{}, err
+// 	}
+// 	usedLine.LineStyle = draw.LineStyle{
+// 		Color: color.RGBA{238, 118, 116, 255},
+// 		Width: 1.0,
+// 	}
+// 	usedLine.FillColor = color.RGBA{238, 118, 116, 255}
+
+// 	availableLine, err := plotter.NewLine(mp.Available.Datapoints.Last(n))
+// 	if err != nil {
+// 		return []byte{}, err
+// 	}
+// 	availableLine.LineStyle = draw.LineStyle{
+// 		Color: color.RGBA{51, 103, 59, 255},
+// 		Width: 1.0,
+// 	}
+// 	availableLine.FillColor = color.RGBA{51, 103, 59, 255}
+
+// 	p := setupPlot("Memory")
+// 	p.Add(usedLine, availableLine)
+// 	p.Legend.Add("used", usedLine)
+// 	p.Legend.Add("available", availableLine)
+
+// 	return plotToPng(p)
+// }
+
+type SingleValuePlot struct {
+	Name       string
+	Value      *series.Series
+	LineStyle  *draw.LineStyle
+	YMin, YMax float64
+}
+
+func (sp SingleValuePlot) PNG(n int) ([]byte, error) {
+	line, err := plotter.NewLine(sp.Value.Datapoints.Last(n))
+	if err != nil {
+		return []byte{}, err
+	}
+	if sp.LineStyle != nil {
+		line.LineStyle = *sp.LineStyle
+	}
+
+	p := setupPlot(sp.Name)
+	if sp.YMax > 0 {
+		p.Y.Min = 0
+		p.Y.Max = 100
+	}
+
+	p.Add(line)
+
+	return plotToPng(p)
+}
+
+// AddPoint avg1, avg5, avg15
+func (sp SingleValuePlot) AddPoint(t time.Time, v ...float64) {
+	if len(v) != 1 {
+		panic("not enough values to add point for SingleValuePlot")
+	}
+	sp.Value.Datapoints.Push(t, v[0])
 }
 
 func setupPlot(title string) *plot.Plot {

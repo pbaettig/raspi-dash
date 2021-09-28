@@ -4,11 +4,50 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/pbaettig/raspi-dash/stats"
 	"github.com/pbaettig/raspi-dash/templates"
 )
+
+func writePlot(p stats.StatPlotter, n int, w http.ResponseWriter) {
+	b, err := p.PNG(n)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(b)
+}
+
+func plotHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	rp := r.FormValue("range")
+	if rp == "" {
+		rp = "-1"
+	}
+
+	rv, err := strconv.Atoi(rp)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	vars := mux.Vars(r)
+	n := vars["name"]
+
+	p, ok := stats.AllPlots[n]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	writePlot(p, rv, w)
+}
 
 func main() {
 	mds, _ := stats.MDStats()
@@ -41,15 +80,29 @@ func main() {
 	eth0, _ := stats.NetworkEth0()
 	fmt.Printf("%+v\n", eth0)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r := mux.NewRouter()
+	r.HandleFunc("/plot/{name}", plotHandler)
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		err := templates.IndexPage.Execute(w, stats.CollectIndexPageData())
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
 	})
+
+	// http.HandleFunc("/")
+	// http.HandleFunc("/plot/temp", func(w http.ResponseWriter, r *http.Request) {
+	// 	b, err := stats.TemperaturePlot.PNG(300)
+	// 	if err != nil {
+	// 		w.WriteHeader(http.StatusInternalServerError)
+	// 		return
+	// 	}
+
+	// 	w.Write(b)
+	// })
+
 	srv := &http.Server{
 		Addr:           ":8080",
-		Handler:        http.DefaultServeMux,
+		Handler:        r,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,

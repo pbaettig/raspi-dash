@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"os/exec"
@@ -89,7 +88,8 @@ func plotSeriesCollector() {
 	for {
 		t := <-ticker.C
 		temp, _ := CPUTemperature()
-		TemperaturePlot.Series.Datapoints.Push(t, temp)
+
+		TemperaturePlot.Value.Datapoints.Push(t, temp)
 
 		n, _ := NetworkEth0()
 		if prevRxB != 0 && prevTxB != 0 {
@@ -106,6 +106,9 @@ func plotSeriesCollector() {
 		LoadAvgPlot.Avg1.Datapoints.Push(t, avg.Load1)
 		LoadAvgPlot.Avg5.Datapoints.Push(t, avg.Load5)
 		LoadAvgPlot.Avg15.Datapoints.Push(t, avg.Load15)
+
+		mi, _ := Meminfo()
+		MemoryUsedPlot.Value.Datapoints.Push(t, (float64(*mi.MemTotal)-float64(*mi.MemFree))*100/float64(*mi.MemTotal))
 	}
 
 }
@@ -205,28 +208,24 @@ func NetworkEth0() (procfs.NetDevLine, error) {
 // }
 
 func CollectIndexPageData() templates.IndexPageData {
-
 	ipd := templates.IndexPageData{Plots: make(map[string]string)}
-	la, err := LoadAvg()
-	if err == nil {
-		ipd.LoadAvg1 = fmt.Sprintf("%.2f", la.Load1)
-		ipd.LoadAvg5 = fmt.Sprintf("%.2f", la.Load5)
-		ipd.LoadAvg15 = fmt.Sprintf("%.2f", la.Load15)
+
+	avg1 := LoadAvgPlot.Avg1.Datapoints.Latest()
+	avg5 := LoadAvgPlot.Avg5.Datapoints.Latest()
+	avg15 := LoadAvgPlot.Avg15.Datapoints.Latest()
+
+	ipd.LoadAvg1 = fmt.Sprintf("%.2f", avg1.Y)
+	ipd.LoadAvg5 = fmt.Sprintf("%.2f", avg5.Y)
+	ipd.LoadAvg15 = fmt.Sprintf("%.2f", avg15.Y)
+
+	temp := TemperaturePlot.Value.Datapoints.Latest()
+	ipd.CPUTemp = fmt.Sprintf("%.1f", temp.Y)
+
+	for n := range AllPlots {
+		ipd.Plots[n] = fmt.Sprintf("/plot/%s?range=-1", n)
 	}
 
-	temp, err := CPUTemperature()
-	if err == nil {
-		ipd.CPUTemp = fmt.Sprintf("%.1f", temp)
-	}
-
-	tp, _ := TemperaturePlot.PNG(300)
-	ipd.Plots["CPU Temp"] = base64.StdEncoding.EncodeToString(tp)
-
-	np, _ := NetworkRxTxPlot.PNG(300)
-	ipd.Plots["eth0 Rx/Tx"] = base64.StdEncoding.EncodeToString(np)
-
-	lp, _ := LoadAvgPlot.PNG(300)
-	ipd.Plots["LoadAvg"] = base64.StdEncoding.EncodeToString(lp)
+	ipd.RaidStats, _ = MDStats()
 	return ipd
 
 }
