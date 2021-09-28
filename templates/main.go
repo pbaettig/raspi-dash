@@ -10,7 +10,7 @@ type IndexPageData struct {
 	LoadAvg5  string
 	LoadAvg15 string
 	CPUTemp   string
-	PlotB64   string
+	Plots     map[string]string
 }
 
 //go:embed *.tmpl
