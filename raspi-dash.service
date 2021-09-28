@@ -1,0 +1,12 @@
+[Unit]
+Description=raspi-dash: some stats
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/raspi-dash
+TimeoutSec=60s
+
+[Install]
+WantedBy=multi-user.target
