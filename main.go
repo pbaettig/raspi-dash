@@ -1,16 +1,30 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pbaettig/raspi-dash/assets"
 	"github.com/pbaettig/raspi-dash/stats"
 	"github.com/pbaettig/raspi-dash/templates"
 )
+
+var (
+	sigs   chan os.Signal = make(chan os.Signal, 1)
+	server *http.Server
+)
+
+func interuptSignalHandler() {
+	<-sigs
+	log.Println("signal received, shutting down.")
+	server.Close()
+}
 
 func writePlot(p stats.StatPlotter, n int, w http.ResponseWriter) {
 	b, err := p.PNG(n)
@@ -18,7 +32,7 @@ func writePlot(p stats.StatPlotter, n int, w http.ResponseWriter) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	w.Header().Add("Cache-Control", "no-cache, must-revalidate")
 	w.Write(b)
 }
 
@@ -49,64 +63,39 @@ func plotHandler(w http.ResponseWriter, r *http.Request) {
 	writePlot(p, rv, w)
 }
 
-func main() {
-	mds, _ := stats.MDStats()
-	for _, md := range mds {
-		fmt.Printf("RAID stats for %s (%s):\n", md.Name, md.ActivityState)
-		fmt.Printf("  Array Size: %.f GB\n", float64(md.BlocksTotal)/1024/1024)
-		fmt.Printf("  Devices: (%d active / %d failed / %d down / %d spare)\n", md.DisksActive, md.DisksFailed, md.DisksDown, md.DisksSpare)
-		for _, d := range md.Devices {
-			fmt.Printf("    - %s\n", d)
-		}
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	err := templates.IndexPage.Execute(w, stats.PrepareIndexPageData())
+	if err != nil {
+		log.Fatalln(err.Error())
 	}
+}
 
-	fmt.Println()
+func main() {
+	// a, err := borg.PhotosRepo.NewestBackupArchive()
+	// if err != nil {
+	// 	log.Fatalln(err.Error())
+	// }
+	// fmt.Printf("%s,%s,%s\n", a.Name, a.Created, a.ID)
+	// fmt.Println(time.Since(time.Time(a.Created)))
 
-	t, _ := stats.CPUTemperature()
-	fmt.Printf("current Temp: %.1fC\n", t)
-
-	fmt.Println()
-
-	ts, _ := stats.CPUThrottlingStatus()
-	fmt.Printf("currently throttled: %v\n", ts.CurrentlyThrottled)
-	fmt.Printf("currently under-volted: %v\n", ts.UnderVoltage)
-
-	mi, _ := stats.Meminfo()
-	fmt.Printf("memory: %d total / %d available / %d free\n", *mi.MemTotal, *mi.MemAvailable, *mi.MemFree)
-
-	la, _ := stats.LoadAvg()
-	fmt.Printf("load average: %.2f/%.2f/%.2f\n", la.Load1, la.Load5, la.Load15)
-
-	eth0, _ := stats.NetworkEth0()
-	fmt.Printf("%+v\n", eth0)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go interuptSignalHandler()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/plot/{name}", plotHandler)
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		err := templates.IndexPage.Execute(w, stats.CollectIndexPageData())
-		if err != nil {
-			log.Fatalln(err.Error())
-		}
-	})
+	r.PathPrefix("/assets").Handler(http.StripPrefix("/assets", http.FileServer(http.FS(assets.FS))))
+	r.HandleFunc("/", indexHandler)
 
-	// http.HandleFunc("/")
-	// http.HandleFunc("/plot/temp", func(w http.ResponseWriter, r *http.Request) {
-	// 	b, err := stats.TemperaturePlot.PNG(300)
-	// 	if err != nil {
-	// 		w.WriteHeader(http.StatusInternalServerError)
-	// 		return
-	// 	}
-
-	// 	w.Write(b)
-	// })
-
-	srv := &http.Server{
+	server = &http.Server{
 		Addr:           ":8080",
 		Handler:        r,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	log.Fatalln(srv.ListenAndServe())
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalln(err.Error())
+	}
 
+	os.Exit(0)
 }

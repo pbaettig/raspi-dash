@@ -3,18 +3,22 @@ package stats
 import (
 	"bytes"
 	"image/color"
+	"log"
 	"time"
 
+	"github.com/pbaettig/raspi-dash/config"
 	"github.com/pbaettig/raspi-dash/series"
+	gofont "golang.org/x/image/font"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
 )
 
 var (
-	TemperaturePlot SingleValuePlot = SingleValuePlot{
+	CPUTemperaturePlot SingleValuePlot = SingleValuePlot{
 		Value: series.NewSeries("cpuTemp", 3600),
-		Name:  "CPUTemperature",
+		Name:  "CPU Temperature",
 		YMin:  0,
 		YMax:  100,
 		LineStyle: &draw.LineStyle{
@@ -33,7 +37,7 @@ var (
 	}
 	MemoryUsedPlot SingleValuePlot = SingleValuePlot{
 		Value: series.NewSeries("used", 3600),
-		Name:  "MemoryUsed",
+		Name:  "Memory Usage",
 		YMin:  0,
 		YMax:  100,
 		LineStyle: &draw.LineStyle{
@@ -41,40 +45,69 @@ var (
 			Width: 1.2,
 		},
 	}
+	DiskUsagePlot DiskPlot = DiskPlot{
+		Data: series.NewSeries("data", 3600),
+		Root: series.NewSeries("root", 3600),
+		Boot: series.NewSeries("boot", 3600),
+	}
 	AllPlots map[string]StatPlotter = map[string]StatPlotter{
-		"cpuTemp":    &TemperaturePlot,
-		"network":    &NetworkRxTxPlot,
-		"loadAvg":    &LoadAvgPlot,
-		"memoryUsed": &MemoryUsedPlot,
+		"cpuTemp":     &CPUTemperaturePlot,
+		"network":     &NetworkRxTxPlot,
+		"loadAvg":     &LoadAvgPlot,
+		"memoryUsage": &MemoryUsedPlot,
+		"diskUsage":   &DiskUsagePlot,
 	}
 )
 
 type StatPlotter interface {
 	PNG(n int) ([]byte, error)
-	AddPoint(t time.Time, v ...float64)
+	// AddPoint(t time.Time, v ...float64)
 }
 
-// type CPUTemperaturePlot struct {
-// 	*series.Series
-// }
+type DiskPlot struct {
+	Data *series.Series
+	Root *series.Series
+	Boot *series.Series
+}
 
-// func (ctp CPUTemperaturePlot) PNG(n int) ([]byte, error) {
-// 	line, err := plotter.NewLine(ctp.Series.Datapoints.Last(n))
-// 	if err != nil {
-// 		return []byte{}, err
-// 	}
-// 	line.LineStyle = draw.LineStyle{
-// 		Color: color.RGBA{202, 46, 85, 255},
-// 		Width: 1.0,
-// 	}
-// 	p := setupPlot("CPU Temperature")
-// 	p.Y.Min = 0
-// 	p.Y.Max = 120
-// 	p.X.Tick.Marker = plot.TimeTicks{}
-// 	p.Add(line)
+func (dp DiskPlot) PNG(n int) ([]byte, error) {
+	dataLine, err := plotter.NewLine(dp.Data.Datapoints.Last(n))
+	if err != nil {
+		return []byte{}, err
+	}
+	dataLine.LineStyle = draw.LineStyle{
+		Color: color.RGBA{43, 89, 195, 255},
+		Width: 1.2,
+	}
 
-// 	return plotToPng(p)
-// }
+	rootLine, err := plotter.NewLine(dp.Root.Datapoints.Last(n))
+	if err != nil {
+		return []byte{}, err
+	}
+	rootLine.LineStyle = draw.LineStyle{
+		Color: color.RGBA{211, 101, 130, 255},
+		Width: 1.2,
+	}
+
+	bootLine, err := plotter.NewLine(dp.Boot.Datapoints.Last(n))
+	if err != nil {
+		return []byte{}, err
+	}
+	bootLine.LineStyle = draw.LineStyle{
+		Color: color.RGBA{187, 219, 155, 255},
+		Width: 1.2,
+	}
+
+	p := setupPlot("Disk Usage")
+	p.Y.Min = 0
+	p.Y.Max = 100
+	p.Add(bootLine, dataLine, rootLine)
+
+	p.Legend.Add("boot", bootLine)
+	p.Legend.Add("data", dataLine)
+	p.Legend.Add("root", rootLine)
+	return plotToPng(p)
+}
 
 type NetworkPlot struct {
 	Rx *series.Series
@@ -101,6 +134,8 @@ func (np NetworkPlot) PNG(n int) ([]byte, error) {
 	}
 
 	p := setupPlot("Network")
+	p.Y.Min = 0
+
 	p.Add(rxLine, txLine)
 	p.Legend.Add("Rx", rxLine)
 	p.Legend.Add("Tx", txLine)
@@ -148,7 +183,7 @@ func (lp LoadPlot) PNG(n int) ([]byte, error) {
 		Width: 1.2,
 	}
 
-	p := setupPlot("LoadAvg")
+	p := setupPlot("Load Average")
 	p.Add(avg1Line, avg5Line, avg15Line)
 	p.Legend.Add("Avg1", avg1Line)
 	p.Legend.Add("Avg5", avg5Line)
@@ -166,39 +201,6 @@ func (lp LoadPlot) AddPoint(t time.Time, v ...float64) {
 	lp.Avg5.Datapoints.Push(t, v[1])
 	lp.Avg15.Datapoints.Push(t, v[2])
 }
-
-// type MemPlot struct {
-// 	Used, Available *series.Series
-// }
-
-// func (mp MemPlot) PNG(n int) ([]byte, error) {
-// 	usedLine, err := plotter.NewLine(mp.Used.Datapoints.Last(n))
-// 	if err != nil {
-// 		return []byte{}, err
-// 	}
-// 	usedLine.LineStyle = draw.LineStyle{
-// 		Color: color.RGBA{238, 118, 116, 255},
-// 		Width: 1.0,
-// 	}
-// 	usedLine.FillColor = color.RGBA{238, 118, 116, 255}
-
-// 	availableLine, err := plotter.NewLine(mp.Available.Datapoints.Last(n))
-// 	if err != nil {
-// 		return []byte{}, err
-// 	}
-// 	availableLine.LineStyle = draw.LineStyle{
-// 		Color: color.RGBA{51, 103, 59, 255},
-// 		Width: 1.0,
-// 	}
-// 	availableLine.FillColor = color.RGBA{51, 103, 59, 255}
-
-// 	p := setupPlot("Memory")
-// 	p.Add(usedLine, availableLine)
-// 	p.Legend.Add("used", usedLine)
-// 	p.Legend.Add("available", availableLine)
-
-// 	return plotToPng(p)
-// }
 
 type SingleValuePlot struct {
 	Name       string
@@ -237,8 +239,22 @@ func (sp SingleValuePlot) AddPoint(t time.Time, v ...float64) {
 
 func setupPlot(title string) *plot.Plot {
 	p := plot.New()
+
+	p.Title.TextStyle.Color = color.RGBA{44, 44, 144, 255}
+	p.Title.TextStyle.Font.Style = gofont.StyleNormal
+	p.Title.TextStyle.Font.Weight = gofont.WeightBold
+	p.Title.TextStyle.Font.Size = 14
+	p.Title.Padding = vg.Points(5)
 	p.Title.Text = title
-	p.X.Tick.Marker = plot.TimeTicks{}
+
+	p.X.Tick.Marker = plot.TimeTicks{
+		Ticker: nil,
+		Format: "15:04:05",
+		Time: func(t float64) time.Time {
+			return time.Unix(int64(t), 0)
+		},
+	}
+
 	p.Add(plotter.NewGrid())
 
 	return p
@@ -246,7 +262,11 @@ func setupPlot(title string) *plot.Plot {
 
 func plotToPng(p *plot.Plot) ([]byte, error) {
 	// Save the plot to a PNG file.
-	wt, err := p.WriterTo(640, 200, "png")
+	if p == nil {
+		log.Fatalln("oops")
+	}
+
+	wt, err := p.WriterTo(config.PlotSizeWidth, config.PlotSizeHeight, "png")
 	if err != nil {
 		return []byte{}, err
 	}

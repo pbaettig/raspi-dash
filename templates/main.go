@@ -4,6 +4,7 @@ import (
 	"embed"
 	"html/template"
 
+	"github.com/pbaettig/raspi-dash/borg"
 	"github.com/prometheus/procfs"
 )
 
@@ -14,6 +15,7 @@ type IndexPageData struct {
 	CPUTemp   string
 	Plots     map[string]string
 	RaidStats []procfs.MDStat
+	Backups   map[string][]borg.Archive
 }
 
 //go:embed *.tmpl
