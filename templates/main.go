@@ -2,7 +2,10 @@ package templates
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
+	"log"
+	"time"
 
 	"github.com/pbaettig/raspi-dash/borg"
 	"github.com/prometheus/procfs"
@@ -18,18 +21,26 @@ type IndexPageData struct {
 	Backups   map[string][]borg.Archive
 }
 
+func fmtDuration(d time.Duration) string {
+	d = d.Round(time.Minute)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	return fmt.Sprintf("%dh %dm", h, m)
+}
+
 //go:embed *.tmpl
 var fs embed.FS
-var IndexPage = template.Must(template.ParseFS(fs, "index.html.tmpl"))
+var IndexPage *template.Template
 
 func init() {
-	// IndexPage = template.Must(template.New("index").Funcs(template.FuncMap{
-	// 	"nilDefault": func(v *interface{}) interface{} {
-	// 		if v == nil {
-	// 			return "-"
-	// 		}
-	// 		return v
-	// 	},
-	// }).ParseFS(fs, "index.html.tmpl"))
-
+	var err error
+	IndexPage, err = template.New("index.html.tmpl").Funcs(
+		template.FuncMap{
+			"fmtDuration": fmtDuration,
+		}).ParseFS(fs, "index.html.tmpl")
+	fmt.Printf("Name: %s\n", IndexPage.Name())
+	if err != nil {
+		log.Fatalf("cannot parse template: %s", err.Error())
+	}
 }

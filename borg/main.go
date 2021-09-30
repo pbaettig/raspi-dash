@@ -91,10 +91,6 @@ func (b Repo) ListBackupArchives() ([]Archive, error) {
 		return []Archive{}, err
 	}
 
-	for i := range archives.Archives {
-		archives.Archives[i].Age = time.Since(time.Time(archives.Archives[i].Created).In(time.Local))
-	}
-
 	sort.Slice(archives.Archives, func(i, j int) bool {
 		return time.Time(archives.Archives[i].Created).After(time.Time(archives.Archives[j].Created))
 	})

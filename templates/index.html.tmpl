@@ -47,18 +47,23 @@
     <hr>
     <br>
     {{ end }}
-    <ul>
+
     {{ range $repoName,$backups := .Backups }}
         <h3>{{ $repoName }}</h3>
-        {{ range $backups }}
-            {{ if .Name }}
-            <li>{{ .Name }} ({{ .Created }}, {{ .Age }})</li>
-            {{ else }}
-            <li>loading...</li>
+        {{ if $backups }}
+            <ul>
+            {{ range $backups }}
+                {{ if .Name }}
+                <li>{{ .Name }} ({{ .Created }}, {{ fmtDuration .Age }})</li>
+                {{ else }}
+                <li>loading...</li>
+                {{ end }}
             {{ end }}
+            </ul>
+        {{ else }}
+            <p>loading...</p>
         {{ end }}
     {{ end }}
-    </ul>
     
     <a href="javascript:void(0);" id="60" class="plot">1m</a>
     <a href="javascript:void(0);" id="300" class="plot">5m</a>

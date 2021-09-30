@@ -106,6 +106,8 @@ func updateTicker() {
 	tickerSlow := time.NewTicker(30 * time.Second)
 	tickerFast := time.NewTicker(1 * time.Second)
 
+	go updateBackups()
+
 	for {
 		select {
 		case t := <-tickerFast.C:
@@ -135,6 +137,14 @@ func PrepareIndexPageData() templates.IndexPageData {
 	}
 
 	ipd.RaidStats, _ = MDStats()
+
+	// update Backup Age
+	for k := range Backups {
+		for i := range Backups[k] {
+			c := time.Time(Backups[k][i].Created)
+			Backups[k][i].Age = time.Since(c.In(time.Local))
+		}
+	}
 
 	ipd.Backups = Backups
 	return ipd

@@ -10,5 +10,6 @@ ssh raspi \
 "sudo systemctl stop $executable_name.service; \
 sudo mv /tmp/$executable_name $raspi_executable_path; \
 sudo chmod a+x $raspi_executable_path; \
-sudo systemctl start $executable_name.service"
-
+sudo systemctl start $executable_name.service
+"
+# sudo systemctl start $executable_name.service
