@@ -47,7 +47,7 @@ func (at *archiveTimestamp) UnmarshalJSON(buf []byte) error {
 }
 
 func (at archiveTimestamp) String() string {
-	return time.Time(at).String()
+	return time.Time(at).Format("2.1.2006 15:04:05")
 }
 
 type Archive struct {

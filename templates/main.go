@@ -39,7 +39,7 @@ func init() {
 		template.FuncMap{
 			"fmtDuration": fmtDuration,
 		}).ParseFS(fs, "index.html.tmpl")
-	fmt.Printf("Name: %s\n", IndexPage.Name())
+
 	if err != nil {
 		log.Fatalf("cannot parse template: %s", err.Error())
 	}
