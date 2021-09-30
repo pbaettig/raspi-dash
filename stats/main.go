@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pbaettig/raspi-dash/borg"
+	"github.com/pbaettig/raspi-dash/config"
 	"github.com/pbaettig/raspi-dash/templates"
 	"github.com/prometheus/procfs"
 )
@@ -103,16 +104,16 @@ func updatePlots(t time.Time) {
 }
 
 func updateTicker() {
-	tickerSlow := time.NewTicker(30 * time.Second)
-	tickerFast := time.NewTicker(1 * time.Second)
+	backupTicker := time.NewTicker(config.BackupUpdateInterval)
+	plotTicker := time.NewTicker(config.PlotUpdateInterval)
 
 	go updateBackups()
 
 	for {
 		select {
-		case t := <-tickerFast.C:
+		case t := <-plotTicker.C:
 			go updatePlots(t)
-		case <-tickerSlow.C:
+		case <-backupTicker.C:
 			go updateBackups()
 		}
 	}
@@ -147,5 +148,9 @@ func PrepareIndexPageData() templates.IndexPageData {
 	}
 
 	ipd.Backups = Backups
+
+	ipd.RangeSliderMin = 60
+	ipd.RangeSliderMax = config.PlotDatapoints
+
 	return ipd
 }

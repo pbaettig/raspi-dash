@@ -7,37 +7,78 @@
         <link rel="stylesheet" href="/assets/styles.css"> 
 
         <script type="text/javascript">
+            const rangeLocalstorageKey = "range"
+            const defaultRange = 123
+            var plotName = function(p) {
+                return p.id.replace("plot-", "")
+            }
+
+            var plotPath = function(p) {
+                return "/plot/" + plotName(p)
+            }
+
+            var rangeStartDate = function(secs) {
+                return new Date(Date.now() - secs*1000);
+            }
+
+            var secondsToTimestampString = function (secs) {
+                var hours   = Math.floor(secs / 3600);
+                var minutes = Math.floor((secs - (hours * 3600)) / 60);
+                var seconds = secs - (hours * 3600) - (minutes * 60);
+
+                if (hours   < 10) {hours   = "0"+hours;}
+                if (minutes < 10) {minutes = "0"+minutes;}
+                if (seconds < 10) {seconds = "0"+seconds;}
+                return hours + ':' + minutes + ':' + seconds;
+            }
+
+            var rangeOutputText = function(secs) {
+                var n = new Date(Date.now())
+                return formatDate(rangeStartDate(secs)) + " - " + formatDate(n) + "(" + secondsToTimestampString(secs) + ")"
+            }
+
+            var formatDate = function(d) {
+                return d.getDate().toString().padStart(2,"0")  + "." + (d.getMonth()+1).toString().padStart(2,"0") + "." + d.getFullYear() + " " +
+d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0") + ":" + d.getSeconds().toString().padStart(2,"0") ;
+            }
+
+
             window.onload = function() {
+                var rangeSlider = document.getElementById("rangeSlider");
+                rangeSlider.oninput = function() {
+                    rangeOutput.innerHTML = rangeOutputText(this.value);
+                }
+
+                rangeSlider.onmouseup =function() {                   
+                    localStorage.setItem(rangeLocalstorageKey, this.value)
+
+                    location.reload()
+                    return false;
+                }
+
+                var rangeOutput = document.getElementById("rangeValue");
                 var plots = document.querySelectorAll("img.plot")
                 var as = document.querySelectorAll("a.plot")
 
+
+                var sv = localStorage.getItem(rangeLocalstorageKey)
+                if (!sv) {
+                    localStorage.setItem(rangeLocalstorageKey, defaultRange)
+                    sv = defaultRange
+                }
+                rangeSlider.value = sv
+                rangeSlider.oninput()
+
                 for (const p of plots) {
-                    const src = localStorage.getItem(p.id)
-                    if (src) {
-                        p.src = src
-                    }
+                    r = localStorage.getItem(rangeLocalstorageKey)
+                    p.src = plotPath(p) + "?range=" + r || "123"
                 }
-                
-                for (const a of as) {
-                    console.log(a)
-                    a.onclick = function() {
-                        range = a.id
-                        for (const p of plots) {
-                            [url, _] = p.src.split("?", 2)
-                            localStorage.setItem(p.id, url + "?range=" + range)
-                        }
-                        
-                        location.reload()
-                        return false;
-                    }
-                }
-                
             }
         </script>
     </head>
 
-    <p><b>Load Avg:</b> {{ .LoadAvg1 }} / {{ .LoadAvg5 }} / {{ .LoadAvg15 }}</p>
-    <p><b>CPU Temp:</b> {{ .CPUTemp }} °C</p>
+    <!-- <p><b>Load Avg:</b> {{ .LoadAvg1 }} / {{ .LoadAvg5 }} / {{ .LoadAvg15 }}</p>
+    <p><b>CPU Temp:</b> {{ .CPUTemp }} °C</p> -->
     <br>
     {{ range .RaidStats }}
     <p><b>RAID Stats for {{ .Name }}</b></p>
@@ -47,7 +88,7 @@
     <hr>
     <br>
     {{ end }}
-
+    <h2>Latest Backups:</h2>
     {{ range $repoName,$backups := .Backups }}
         <h3>{{ $repoName }}</h3>
         {{ if $backups }}
@@ -64,13 +105,16 @@
             <p>loading...</p>
         {{ end }}
     {{ end }}
+
+    <br>
+    <hr>
+    <br>
+
     
-    <a href="javascript:void(0);" id="60" class="plot">1m</a>
-    <a href="javascript:void(0);" id="300" class="plot">5m</a>
-    <a href="javascript:void(0);" id="900" class="plot">15m</a>
-    <a href="javascript:void(0);" id="1800" class="plot">30m</a>
-    <a href="javascript:void(0);" id="-1" class="plot">All</a>
-    
+    <div class="slidecontainer">
+        <input type="range" min="{{ .RangeSliderMin }}" max="{{ .RangeSliderMax }}" value="300" class="slider" id="rangeSlider">
+        <p><span id="rangeValue"></span></p>
+      </div>
 
     <div class="flex-container">
         {{ range $name, $src := .Plots }}
@@ -80,19 +124,4 @@
             <br>
         {{ end }}
     </div>
-
-    <!-- <table>
-        <tr>
-            <td><img id="plot-cpuTemp" class="plot" alt="cpuTemp" src="{{ .Plots.cpuTemp }}" /></td>
-            <td><img id="plot-diskUsage" class="plot" alt="diskUsage" src="{{ .Plots.diskUsage }}" /></td>
-        </tr>
-        <tr>
-            <td><img id="plot-loadAvg" class="plot" alt="loadAvg" src="{{ .Plots.loadAvg }}" /></td>
-            <td><img id="plot-memoryUsage" class="plot" alt="memoryUsage" src="{{ .Plots.memoryUsage }}" /></td>
-        </tr>
-        <tr>
-            <td><img id="plot-network" class="plot" alt="network" src="{{ .Plots.network }}" /></td>
-            <td></td>
-        </tr>
-    </table> -->
 </html>

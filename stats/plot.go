@@ -8,8 +8,8 @@ import (
 
 	"github.com/pbaettig/raspi-dash/config"
 	"github.com/pbaettig/raspi-dash/series"
-	gofont "golang.org/x/image/font"
 	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/font"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
@@ -17,7 +17,7 @@ import (
 
 var (
 	CPUTemperaturePlot SingleValuePlot = SingleValuePlot{
-		Value: series.NewSeries("cpuTemp", 3600),
+		Value: series.NewSeries("cpuTemp", config.PlotDatapoints),
 		Name:  "CPU Temperature",
 		YMin:  0,
 		YMax:  100,
@@ -27,16 +27,16 @@ var (
 		},
 	}
 	NetworkRxTxPlot NetworkPlot = NetworkPlot{
-		Rx: series.NewSeries("eth0 Rx", 3600),
-		Tx: series.NewSeries("eth0 Tx", 3600),
+		Rx: series.NewSeries("eth0 Rx", config.PlotDatapoints),
+		Tx: series.NewSeries("eth0 Tx", config.PlotDatapoints),
 	}
 	LoadAvgPlot LoadPlot = LoadPlot{
-		Avg1:  series.NewSeries("avg1", 3600),
-		Avg5:  series.NewSeries("avg5", 3600),
-		Avg15: series.NewSeries("avg15", 3600),
+		Avg1:  series.NewSeries("avg1", config.PlotDatapoints),
+		Avg5:  series.NewSeries("avg5", config.PlotDatapoints),
+		Avg15: series.NewSeries("avg15", config.PlotDatapoints),
 	}
 	MemoryUsedPlot SingleValuePlot = SingleValuePlot{
-		Value: series.NewSeries("used", 3600),
+		Value: series.NewSeries("used", config.PlotDatapoints),
 		Name:  "Memory Usage",
 		YMin:  0,
 		YMax:  100,
@@ -46,9 +46,9 @@ var (
 		},
 	}
 	DiskUsagePlot DiskPlot = DiskPlot{
-		Data: series.NewSeries("data", 3600),
-		Root: series.NewSeries("root", 3600),
-		Boot: series.NewSeries("boot", 3600),
+		Data: series.NewSeries("data", config.PlotDatapoints),
+		Root: series.NewSeries("root", config.PlotDatapoints),
+		Boot: series.NewSeries("boot", config.PlotDatapoints),
 	}
 	AllPlots map[string]StatPlotter = map[string]StatPlotter{
 		"cpuTemp":     &CPUTemperaturePlot,
@@ -240,10 +240,10 @@ func (sp SingleValuePlot) AddPoint(t time.Time, v ...float64) {
 func setupPlot(title string) *plot.Plot {
 	p := plot.New()
 
-	p.Title.TextStyle.Color = color.RGBA{44, 44, 144, 255}
-	p.Title.TextStyle.Font.Style = gofont.StyleNormal
-	p.Title.TextStyle.Font.Weight = gofont.WeightBold
-	p.Title.TextStyle.Font.Size = 14
+	p.Title.TextStyle.Color = config.PlotTitleFontColor
+	p.Title.TextStyle.Font.Style = config.PlotTitleFontStyle
+	p.Title.TextStyle.Font.Weight = config.PlotTitleFontWeight
+	p.Title.TextStyle.Font.Size = font.Length(config.PlotTitleFontSize)
 	p.Title.Padding = vg.Points(5)
 	p.Title.Text = title
 
@@ -261,7 +261,6 @@ func setupPlot(title string) *plot.Plot {
 }
 
 func plotToPng(p *plot.Plot) ([]byte, error) {
-	// Save the plot to a PNG file.
 	if p == nil {
 		log.Fatalln("oops")
 	}

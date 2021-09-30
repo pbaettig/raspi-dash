@@ -12,13 +12,15 @@ import (
 )
 
 type IndexPageData struct {
-	LoadAvg1  string
-	LoadAvg5  string
-	LoadAvg15 string
-	CPUTemp   string
-	Plots     map[string]string
-	RaidStats []procfs.MDStat
-	Backups   map[string][]borg.Archive
+	LoadAvg1       string
+	LoadAvg5       string
+	LoadAvg15      string
+	CPUTemp        string
+	Plots          map[string]string
+	RaidStats      []procfs.MDStat
+	Backups        map[string][]borg.Archive
+	RangeSliderMin int
+	RangeSliderMax int
 }
 
 func fmtDuration(d time.Duration) string {
