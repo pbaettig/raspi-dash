@@ -7,6 +7,7 @@ Type=simple
 User=root
 ExecStart=/usr/local/bin/raspi-dash
 TimeoutSec=60s
+EnvironmentFile=/etc/default/raspi-dash
 
 [Install]
 WantedBy=multi-user.target

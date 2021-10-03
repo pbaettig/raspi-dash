@@ -18,6 +18,8 @@ const (
 	BackupUpdateInterval = 1 * time.Minute
 	PlotDatapoints       = 12 * 3600
 	PlotDataRange        = time.Duration(PlotDatapoints) * PlotUpdateInterval
+
+	DocumentsPath = "/data/share/documents/"
 )
 
 var (

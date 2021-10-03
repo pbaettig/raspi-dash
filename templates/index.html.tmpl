@@ -8,7 +8,7 @@
 
         <script type="text/javascript">
             const rangeLocalstorageKey = "range"
-            const defaultRange = 123
+            const defaultRange = 900
             var plotName = function(p) {
                 return p.id.replace("plot-", "")
             }
@@ -44,6 +44,23 @@ d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padSta
 
 
             window.onload = function() {
+                var docBtn = document.getElementById("grabDoc")
+                var docTxt = document.getElementById("docId")
+                docTxt.onkeyup = function(event) {
+                    // Enter key
+                    if (event.keyCode === 13) {
+                        docBtn.click()
+                    }
+                }
+
+               
+                docBtn.onclick = function() {
+                    if (docTxt.value) {
+                        window.open("/private/docs/id/" + docTxt.value, '_blank').focus()
+                    }   
+                }
+
+
                 var rangeSlider = document.getElementById("rangeSlider");
                 rangeSlider.oninput = function() {
                     rangeOutput.innerHTML = rangeOutputText(this.value);
@@ -85,6 +102,9 @@ d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padSta
     <p><b>Array State:</b> {{ .ActivityState }}</p>
     <p><b>Disks:</b> {{ .DisksTotal }} total ({{ .DisksActive }} active / {{ .DisksSpare }} spare / {{ .DisksDown }} down / {{ .DisksFailed }} failed)</p>
     <br>
+    <hr>
+    <input type="text" id="docId" name="docId">
+    <button type="button" id="grabDoc">Grab Document</button> 
     <hr>
     <br>
     {{ end }}
