@@ -8,6 +8,7 @@ User=root
 ExecStart=/usr/local/bin/raspi-dash
 TimeoutSec=60s
 EnvironmentFile=/etc/default/raspi-dash
+WorkingDirectory=/var/run/raspi-dash/
 
 [Install]
 WantedBy=multi-user.target

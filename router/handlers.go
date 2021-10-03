@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pbaettig/raspi-dash/config"
@@ -94,3 +95,15 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err.Error())
 	}
 }
+
+type RedirectHandler int
+
+func (h RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	url := strings.TrimPrefix(r.URL.Path, "/")
+	w.Header().Set("Location", fmt.Sprintf("https://%s/%s", config.ExternalDomainName, url))
+	w.WriteHeader(int(h))
+}
+
+var (
+	PermanentRedirectHandler = RedirectHandler(http.StatusMovedPermanently)
+)

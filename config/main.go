@@ -20,6 +20,11 @@ const (
 	PlotDataRange        = time.Duration(PlotDatapoints) * PlotUpdateInterval
 
 	DocumentsPath = "/data/share/documents/"
+
+	LetsEncryptUserName    = "pbaettig@gmail.com"
+	ExternalDomainName     = "home.caspal.ch"
+	TLSCertificateFilePath = "cert.pem"
+	TLSPrivateKeyFilePath  = "key.pem"
 )
 
 var (
