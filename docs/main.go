@@ -8,6 +8,12 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/pbaettig/raspi-dash/config"
+)
+
+var (
+	FS = NewDocuments(config.DocumentsPath)
 )
 
 type File struct {

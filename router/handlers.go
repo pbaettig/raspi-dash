@@ -15,10 +15,6 @@ import (
 	"github.com/pbaettig/raspi-dash/templates"
 )
 
-var (
-	docfs = docs.NewDocuments(config.DocumentsPath)
-)
-
 func writePlot(p stats.StatPlotter, n int, w http.ResponseWriter) {
 	b, err := p.PNG(n)
 	if err != nil {
@@ -69,16 +65,16 @@ func docByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := docfs.FindById(id)
+	found, err := docs.FS.FindById(id)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("no document with id %s found", id), http.StatusNotFound)
 		return
 	}
 
 	if len(found) == 1 {
-		buf, err = docfs.ReadFile(found[0])
+		buf, err = docs.FS.ReadFile(found[0])
 	} else {
-		buf, err = docfs.ZipFiles(found)
+		buf, err = docs.FS.ZipFiles(found)
 	}
 
 	if err != nil {

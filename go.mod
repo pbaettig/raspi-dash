@@ -5,10 +5,12 @@ go 1.16
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/disintegration/imageorient v0.0.0-20180920195336-8147d86e83ec
 	github.com/go-acme/lego v2.7.2+incompatible
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/miekg/dns v1.1.43 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/prometheus/procfs v0.7.3
 	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
